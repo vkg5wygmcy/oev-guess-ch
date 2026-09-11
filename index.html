@@ -49,73 +49,92 @@ header{
 main{position:relative;flex:1;min-height:0;overflow:hidden}
 #map{position:absolute;inset:0;background:#EEF1F4}
 .panel{
-  position:absolute;left:0;top:0;z-index:3;width:474px;max-width:100%;
+  position:absolute;left:0;top:0;z-index:3;max-width:100%;
   max-height:100%;overflow-y:auto;overscroll-behavior:contain;
-  background:var(--ci-bg);display:flex;flex-direction:column;
   box-shadow:2px 0 12px rgba(0,0,0,.28);
 }
 .panel.min .deps,.panel.min .controls,.panel.min #resultBox{display:none}
 
-/* ---------- Kundeninformationsanzeige ---------- */
-.ci{width:100%;font-size:11px;line-height:1;color:#fff}
-.ci-banner{position:relative;min-height:52px;background:var(--ci-red);padding:7px 30px 7px 31px}
+/* ---------- Kundeninformationsanzeige --------------------------------
+   Alle Masse leiten sich von --f ab, der Grundeinheit der Anzeige. Sie
+   wächst mit der Fensterbreite, dadurch bleibt das am Original vermessene
+   Verhältnis von Spalten, Zeilenhöhe und Schrift auf jedem Gerät erhalten. */
+.panel{
+  --f:clamp(10px,2.55vw,13.5px);
+  font-size:var(--f);width:calc(43.1*var(--f));
+  background:var(--ci-bg);display:flex;flex-direction:column;
+}
+.ci{width:100%;line-height:1;color:#fff}
+.ci-banner{
+  position:relative;min-height:calc(4.73*var(--f));background:var(--ci-red);
+  padding:calc(.64*var(--f)) calc(2.73*var(--f)) calc(.64*var(--f)) calc(2.82*var(--f));
+}
 .ci-ico{
-  position:absolute;left:6px;top:12px;width:20px;height:20px;border:1px solid #fff;border-radius:3px;
-  display:flex;align-items:center;justify-content:center;font-size:12px;line-height:1;
+  position:absolute;left:calc(.55*var(--f));top:calc(1.09*var(--f));
+  width:calc(1.82*var(--f));height:calc(1.82*var(--f));
+  border:1px solid #fff;border-radius:calc(.27*var(--f));
+  display:flex;align-items:center;justify-content:center;
+  font-size:calc(1.09*var(--f));line-height:1;
 }
-.mystery{font-size:11px;line-height:13px;color:#fff}
+.mystery{font-size:var(--f);line-height:calc(1.18*var(--f));color:#fff}
 .mystery b{font-weight:700}
-.mystery .q{display:inline-block;background:#fff;color:var(--ci-red);font-weight:700;padding:0 6px;letter-spacing:2px}
+.mystery .q{display:inline-block;background:#fff;color:var(--ci-red);font-weight:700;
+  padding:0 calc(.55*var(--f));letter-spacing:.18em}
 .mystery.revealed .q{letter-spacing:0}
-.ci-dots{position:absolute;right:6px;bottom:5px;display:flex;gap:3px}
-.ci-dots i{width:4px;height:4px;border-radius:50%;border:1px solid #fff}
-.ci-dots i.on{background:#fff}
-.ci-head{
-  display:grid;grid-template-columns:39px 31px 1fr 51px 89px;align-items:center;
-  height:10px;padding-left:4px;background:var(--ci-head);color:#333;font-size:8px;font-weight:700;
+.ci-dots{position:absolute;right:calc(.55*var(--f));bottom:calc(.45*var(--f));display:flex;gap:3px}
+.ci-dots i{width:calc(.36*var(--f));height:calc(.36*var(--f));border-radius:50%;border:1px solid #fff}
+.ci-head,.deps li{
+  display:grid;
+  grid-template-columns:calc(3.55*var(--f)) calc(2.82*var(--f)) 1fr calc(4.64*var(--f)) calc(8.09*var(--f));
+  align-items:center;padding-left:calc(.36*var(--f));
 }
+.ci-head{height:calc(.91*var(--f));background:var(--ci-head);color:#333;
+  font-size:calc(.73*var(--f));font-weight:700}
 .ci-head .clock{grid-column:1/3;font-variant-numeric:tabular-nums}
 .deps{list-style:none;margin:0;padding:0;background:var(--ci-bg);color:#fff}
-.deps li{
-  display:grid;grid-template-columns:39px 31px 1fr 51px 89px;align-items:center;
-  height:16px;padding-left:4px;color:#fff;border-bottom:1px solid var(--ci-line);
-  overflow:hidden;white-space:nowrap;
-}
+.deps li{height:calc(1.455*var(--f));color:#fff;border-bottom:1px solid var(--ci-line);
+  overflow:hidden;white-space:nowrap}
 .badge{
-  display:flex;align-items:center;width:31px;height:11px;padding:0 2px;
-  font-size:10px;font-weight:700;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;
-  background:#fff;color:#000;
+  display:flex;align-items:center;width:calc(2.82*var(--f));height:var(--f);
+  padding:0 calc(.18*var(--f));font-size:calc(.91*var(--f));letter-spacing:-.02em;
+  white-space:nowrap;overflow:hidden;background:#fff;color:#000;font-weight:700;
 }
-.badge.long{font-size:9px;letter-spacing:-.4px}
-.dep-time{font-size:11px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
-.dep-dest{font-size:11px;overflow:hidden;text-overflow:ellipsis}
+.badge.long{font-size:calc(.82*var(--f));letter-spacing:-.04em}
+.dep-time{font-size:var(--f);font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
+.dep-dest{font-size:var(--f);overflow:hidden;text-overflow:ellipsis}
 .dep-dest b{font-weight:700;color:#fff}
 .dep-dest .via{color:var(--ci-via)}
 .dep-dest .stops{color:var(--ci-stops)}
 .dep-track{
-  font-size:11px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;
-  display:grid;grid-template-columns:14px 1fr;gap:2px;align-items:center;overflow:hidden;
+  font-size:var(--f);font-weight:700;color:#fff;font-variant-numeric:tabular-nums;
+  display:grid;grid-template-columns:calc(1.27*var(--f)) 1fr;gap:calc(.18*var(--f));
+  align-items:center;overflow:hidden;
 }
 .dep-track u{text-decoration:none;text-align:right}
-.dep-hint{height:16px;display:flex;align-items:center}
-.dep-hint .out{display:flex;align-items:center;height:10px;width:100%;padding:0 4px;
-  background:var(--ci-red);color:#fff;font-size:9px;font-weight:700}
-.dep-hint .late{padding-left:4px;font-size:9px;font-weight:700;color:var(--ci-note);white-space:nowrap}
-.deps li.loading{display:block;height:auto;padding:22px 12px;text-align:center;
-  color:var(--ci-stops);font-size:12px;border-bottom:none;white-space:normal}
+.dep-hint{height:calc(1.455*var(--f));display:flex;align-items:center}
+.dep-hint .out{display:flex;align-items:center;height:calc(.91*var(--f));width:100%;
+  padding:0 calc(.36*var(--f));background:var(--ci-red);color:#fff;
+  font-size:calc(.82*var(--f));font-weight:700}
+.dep-hint .late{padding-left:calc(.36*var(--f));font-size:calc(.82*var(--f));
+  font-weight:700;color:var(--ci-note);white-space:nowrap}
+.deps li.loading{display:block;height:auto;padding:calc(1.8*var(--f)) calc(1.1*var(--f));
+  text-align:center;color:var(--ci-stops);font-size:calc(1.05*var(--f));
+  border-bottom:none;white-space:normal;line-height:1.45}
 .board-foot{
-  background:var(--ci-head);color:#333;font-size:9px;padding:4px 6px;
+  background:var(--ci-head);color:#333;font-size:calc(.82*var(--f));
+  padding:calc(.36*var(--f)) calc(.55*var(--f));
   display:flex;justify-content:space-between;align-items:center;gap:8px;
 }
-.board-foot button{border:none;background:none;font-size:11px;color:#333;cursor:pointer;padding:2px 4px}
-.pulse{width:6px;height:6px;border-radius:50%;background:#1a7d3f;display:inline-block;margin-right:5px;
-  animation:blink 2s infinite}
+.board-foot button{border:none;background:none;font-size:calc(.95*var(--f));color:#333;
+  cursor:pointer;padding:2px 4px}
+.pulse{width:calc(.55*var(--f));height:calc(.55*var(--f));border-radius:50%;background:#1a7d3f;
+  display:inline-block;margin-right:calc(.45*var(--f));animation:blink 2s infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
 @media (prefers-reduced-motion:reduce){.pulse{animation:none}}
 
 /* ---------- Steuerung ---------- */
 .controls{background:var(--white);padding:12px;display:flex;flex-direction:column;gap:9px}
-.hint{font-size:13px;color:var(--granite);line-height:1.45}
+.btn.warn{background:var(--red125)}
 .btn{border:none;border-radius:2px;padding:12px 14px;font-size:15px;font-weight:700;cursor:pointer;
   background:var(--red);color:#fff;min-height:44px}
 .btn:hover:not(:disabled){background:var(--red125)}
@@ -205,7 +224,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 .tabsbar button.on{background:var(--white);color:var(--charcoal);font-weight:700;
   box-shadow:inset 0 3px 0 var(--red)}
 
-#viewPoster{overflow:auto;background:#FBC707;-webkit-overflow-scrolling:touch}
+#viewPoster{--p:clamp(11px,2.4vw,14px);overflow:auto;background:#FBC707;-webkit-overflow-scrolling:touch}
 .pk-pick{position:absolute;inset:0;background:var(--milk);display:flex;flex-direction:column}
 .pk-pick[hidden]{display:none}
 .pk-pick .bar{display:flex;gap:8px;padding:10px;padding-top:max(10px,env(safe-area-inset-top));background:var(--white);border-bottom:1px solid var(--cloud);
@@ -244,19 +263,23 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 @media (min-width:1350px){ .pk-body{column-count:3} }
 @media (min-width:1800px){ .pk-body{column-count:4} }
 .pk-hour{break-inside:avoid;margin:14px 0 0}
-.pk-hour h4{margin:0;font-size:31px;font-weight:700;line-height:1.05;letter-spacing:-1px}
+.pk-hour h4{margin:0;font-size:calc(2.38*var(--p));font-weight:700;line-height:1.05;letter-spacing:-1px}
 .pk-hour .rule{height:3px;background:#000;margin-top:2px}
 .pk-row{
-  display:grid;grid-template-columns:14px 44px 62px 1fr 32px;gap:0 6px;align-items:baseline;
-  border-bottom:1px solid #000;padding:2px 0 3px;font-size:13px;line-height:17px;
+  display:grid;
+  grid-template-columns:calc(1.08*var(--p)) calc(3.4*var(--p)) calc(4.8*var(--p)) 1fr calc(2.5*var(--p));
+  gap:0 calc(.45*var(--p));align-items:baseline;
+  border-bottom:1px solid #000;padding:2px 0 3px;font-size:var(--p);line-height:calc(1.31*var(--p));
   break-inside:avoid;
 }
-.pk-fn{font-size:9px;text-align:center}
+.pk-fn{font-size:calc(.7*var(--p));text-align:center}
 .pk-track{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   
 .pk-colhead{
-  display:grid;grid-template-columns:14px 44px 62px 1fr 32px;gap:0 6px;
-  padding:6px clamp(10px,3vw,18px) 2px;font-size:11px;font-weight:700;
+  display:grid;
+  grid-template-columns:calc(1.08*var(--p)) calc(3.4*var(--p)) calc(4.8*var(--p)) 1fr calc(2.5*var(--p));
+  gap:0 calc(.45*var(--p));
+  padding:6px clamp(10px,3vw,18px) 2px;font-size:calc(.85*var(--p));font-weight:700;
 }
 .pk-colhead span:last-child{text-align:right}
 .pk-legend{padding:6px clamp(10px,3vw,18px) 10px;break-inside:avoid}
@@ -278,72 +301,61 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 .nb>span{flex:0 0 auto;white-space:nowrap}
 .pk-bus{
   display:inline-block;border:1px solid #000;border-radius:2px;padding:0 3px;
-  font-size:11.5px;line-height:14px;font-weight:700;white-space:nowrap;
+  font-size:calc(.88*var(--p));line-height:calc(1.08*var(--p));font-weight:700;white-space:nowrap;
 }
 .pk-line .mark{font-style:italic;letter-spacing:-1px;padding-right:1px}
 .pk-dest b{font-weight:700}
 .pk-dest .via{font-weight:400}
 .fill{
-  font:inherit;font-size:12px;line-height:15px;padding:0 3px;width:100%;
+  font:inherit;font-size:calc(.92*var(--p));line-height:calc(1.15*var(--p));padding:0 3px;width:100%;
   border:1px solid rgba(0,0,0,.55);background:rgba(255,255,255,.55);border-radius:1px;color:#000;
 }
-.pk-dest .fill{width:150px}
+.pk-dest .fill{width:calc(11*var(--p))}
 .fill:focus{outline:2px solid #000;background:#fff}
 .fill.bad{background:#FFD8D8;border-color:var(--red)}
 .pk-foot{padding:0 clamp(10px,3vw,18px);padding-bottom:max(30px,env(safe-area-inset-bottom));font-size:11.5px;line-height:1.5}
 
 /* ---------- Bildschirmgrössen ------------------------------------
-   Notebook: Anzeige als Spalte über der Karte, feste Breite.
-   Tablet:   schmalere schwebende Spalte, damit die Karte Platz behält.
-   Telefon:  Anzeige über die volle Breite, einklappbar.             */
-@media (max-width:1100px) and (min-width:761px){
-  .panel{width:min(474px,52vw)}
-}
+   Anzeige und Plakat skalieren über --f und --p stufenlos mit. Hier
+   bleiben nur die Entscheide, die sich nicht aus einer Grundeinheit
+   ableiten lassen: Anordnung, Spaltenbreiten, Sichtbarkeit.        */
 @media (max-width:760px){
   .panel{width:100%;max-height:68%;box-shadow:0 2px 12px rgba(0,0,0,.28)}
+  .ci-head,.deps li{
+    grid-template-columns:calc(3.4*var(--f)) calc(2.7*var(--f)) 1fr calc(3.6*var(--f)) calc(5.4*var(--f));
+  }
   .controls{padding:10px;padding-bottom:max(10px,env(safe-area-inset-bottom))}
   .result,.final{padding-left:10px;padding-right:10px}
   .hints{flex-direction:column}
-  .hints .btn{min-height:42px}
-  .deps li,.ci-head{grid-template-columns:36px 30px 1fr 44px 62px}
-  .pk-row,.pk-colhead{grid-template-columns:13px 40px 58px 1fr 28px}
   .pk-body{column-count:1}
 }
 @media (max-width:560px){
   :root{--hdr:48px}
-  .mark h1{display:none}
-  .mark .sub{display:none}
+  .mark h1,.mark .sub{display:none}
   .progress{gap:8px;font-size:11.5px}
-  .progress b{font-size:13px}
   .tabsbar button{padding:6px 10px;font-size:12.5px}
   .iconbtn{width:34px;height:34px}
-  .deps li,.ci-head{grid-template-columns:34px 28px 1fr 40px 54px}
-  .mystery{font-size:11.5px}
 }
 @media (max-width:380px){
-  .deps li,.ci-head{grid-template-columns:32px 27px 1fr 34px 46px}
-  .dep-hint .late{font-size:8.5px}
-  .pk-row,.pk-colhead{grid-template-columns:12px 38px 54px 1fr 24px}
+  .ci-head,.deps li{
+    grid-template-columns:calc(3.2*var(--f)) calc(2.6*var(--f)) 1fr calc(3.1*var(--f)) calc(4.6*var(--f));
+  }
 }
-/* Querformat auf dem Telefon: die Anzeige als schmale Spalte,
-   sonst bleibt von der Karte nichts übrig. */
+/* Querformat auf dem Telefon: schmale Spalte, sonst bleibt keine Karte übrig */
 @media (max-height:560px) and (orientation:landscape){
   :root{--hdr:44px}
-  .panel{width:min(420px,60vw);max-height:100%}
+  .panel{--f:clamp(9.5px,1.5vw,12px);width:calc(43.1*var(--f));max-height:100%}
   .mark h1,.mark .sub{display:none}
 }
-@media (min-width:1600px){
-  .panel{width:520px}
-  .ci,.deps li,.ci-head{font-size:12px}
+/* Grosse Schirme: die Anzeige darf mitwachsen, aber nicht die Karte verdrängen */
+@media (min-width:1500px){
+  .panel{--f:clamp(13px,1.05vw,16px)}
 }
-/* Zeigegeräte ohne Feinsteuerung: grössere Ziele */
 @media (pointer:coarse){
   .chip{min-height:36px;padding:8px 12px}
   .tab{padding:11px 14px}
   .dlg select,.dlg input[type=text]{padding:12px}
-}
-@media (prefers-reduced-motion:reduce){
-  *{scroll-behavior:auto}
+  .fill{min-height:22px}
 }
 </style>
 </head>
@@ -388,7 +400,6 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     </div>
 
     <div class="controls" id="controls">
-      <div class="hint" id="guideText">Setze einen Punkt auf der Karte, wo diese Haltestelle liegt.</div>
       <div class="hints">
         <button class="btn ghost" id="hintLetter">Anfangsbuchstabe (−500)</button>
         <button class="btn ghost" id="hintCircle">Umkreis eingrenzen (−1000)</button>
@@ -962,7 +973,7 @@ async function buildMap(){
     }else if(!usingTrafimage){
       setGuess(e.lngLat.lat,e.lngLat.lng,'');      /* Rasterkarte kennt keine Symbole */
     }else{
-      $('guideText').innerHTML='<span style="color:var(--red125)">Dort ist keine Haltestelle. Zoome hinein und klicke auf ein Haltestellensymbol.</span>';
+      setGuessBtn('Dort ist keine Haltestelle – hineinzoomen',true);
     }
   });
   let hoverRaf=0;
@@ -1094,9 +1105,19 @@ function setGuess(lat,lon,name){
   state.guess={lat,lon};
   state.guessName=name||'';
   $('btnGuess').disabled=false;
-  $('guideText').textContent=name
-    ? 'Haltestelle gewählt. Ein Klick auf ein anderes Symbol ändert den Tipp.'
-    : 'Tipp gesetzt. Ein weiterer Klick verschiebt ihn.';
+  setGuessBtn('Tipp abgeben');
+}
+/* Die Schaltfläche trägt den Zustand, damit kein zusätzlicher Textblock
+   Platz auf kleinen Geräten wegnimmt. */
+let guessBtnTimer=null;
+function setGuessBtn(t,flash){
+  clearTimeout(guessBtnTimer);
+  $('btnGuess').textContent=t;
+  $('btnGuess').classList.toggle('warn',!!flash);
+  if(flash) guessBtnTimer=setTimeout(()=>{
+    $('btnGuess').classList.remove('warn');
+    setGuessBtn(state.guess?'Tipp abgeben':'Haltestelle auf der Karte wählen');
+  },1800);
 }
 function clearMarks(){
   if(guessMarker){guessMarker.remove();guessMarker=null}
@@ -1249,8 +1270,9 @@ async function newRound(){
   $('controls').style.display='flex';
   $('btnGuess').disabled=true;
   $('hintLetter').disabled=false; $('hintCircle').disabled=false;
-  $('guideText').innerHTML='Klicke auf der Karte das Haltestellensymbol an, das du meinst.<br>'+
-    '<span style="color:var(--metal)">Hineinzoomen, bis die Symbole erscheinen. Halbe Punktzahl bei '+fmtDist(SCALE.d0*Math.LN2)+' Abweichung.</span>';
+  $('hintLetter').textContent='Anfangsbuchstabe (−500)';
+  $('hintCircle').textContent='Umkreis eingrenzen (−1000)';
+  setGuessBtn('Haltestelle auf der Karte wählen');
   $('mystery').className='mystery';
   $('mystery').innerHTML='<b>Standort:</b> <span class="q">? ? ?</span> Anzeige mit Echtzeitdaten. An welcher Haltestelle hängt sie?';
   clearMarks();
@@ -1433,7 +1455,7 @@ $('hintCircle').onclick=()=>{
   state.penalty+=1000; $('hintCircle').disabled=true;
   const r=SCALE.hint,j=()=>(Math.random()-.5)*(r/160);
   drawCircle({lat:state.stop.lat+j(),lon:state.stop.lon+j()*1.4},r);
-  $('guideText').textContent='Die Haltestelle liegt im markierten Umkreis von '+r+' km.';
+  $('hintCircle').textContent='Umkreis '+r+' km eingegrenzt';
 };
 $('btnGuess').onclick=()=>{ if(state.guess&&!window.__revealed) reveal(); };
 $('btnFold').onclick=()=>{
