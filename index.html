@@ -141,8 +141,6 @@ main{position:relative;flex:1;min-height:0;overflow:hidden}
 .btn:disabled{background:var(--cloud);color:var(--metal);cursor:not-allowed}
 .btn.ghost{background:var(--white);color:var(--charcoal);border:1px solid var(--metal);font-weight:400}
 .btn.ghost:hover{background:var(--milk)}
-.hints{display:flex;gap:8px}
-.hints .btn{flex:1;padding:9px 6px;font-size:12.5px;font-weight:400;min-height:38px}
 
 /* ---------- Auflösung ---------- */
 .result{padding:12px;border-top:3px solid var(--red);background:var(--white)}
@@ -227,11 +225,20 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 #viewPoster{--p:clamp(11px,2.4vw,14px);overflow:auto;background:#FBC707;-webkit-overflow-scrolling:touch}
 .pk-pick{position:absolute;inset:0;background:var(--milk);display:flex;flex-direction:column}
 .pk-pick[hidden]{display:none}
-.pk-pick .bar{display:flex;gap:8px;padding:10px;padding-top:max(10px,env(safe-area-inset-top));background:var(--white);border-bottom:1px solid var(--cloud);
-  align-items:center;flex-wrap:wrap}
-.pk-pick .bar input{flex:1;min-width:180px;padding:10px;border:1px solid var(--metal);border-radius:2px;font-size:14px}
-.pk-pick .bar .btn{min-height:40px;padding:9px 14px;font-size:14px}
-.pk-pick .hintline{font-size:12.5px;color:var(--granite);padding:8px 10px;background:var(--white)}
+.pk-pick .bar{
+  display:flex;gap:10px;padding:12px;padding-top:max(12px,env(safe-area-inset-top));
+  background:var(--white);border-bottom:1px solid var(--cloud);align-items:stretch;
+}
+.pk-pick .bar input{
+  flex:1 1 auto;min-width:0;padding:12px 14px;border:1px solid var(--metal);
+  border-radius:2px;font-size:16px;
+}
+.pk-pick .bar .btn{flex:0 0 auto;min-height:46px;padding:10px 18px;font-size:15px;white-space:nowrap}
+@media (max-width:520px){
+  .pk-pick .bar{flex-wrap:wrap}
+  .pk-pick .bar input{flex:1 1 100%}
+  .pk-pick .bar .btn{flex:1 1 100%}
+}
 #map2{position:relative;flex:1;min-height:0}
 
 .pk-top{background:#000;color:#fff;padding:12px clamp(10px,3vw,18px);display:flex;align-items:center;gap:14px}
@@ -326,7 +333,6 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   }
   .controls{padding:10px;padding-bottom:max(10px,env(safe-area-inset-bottom))}
   .result,.final{padding-left:10px;padding-right:10px}
-  .hints{flex-direction:column}
   .pk-body{column-count:1}
 }
 @media (max-width:560px){
@@ -400,10 +406,6 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     </div>
 
     <div class="controls" id="controls">
-      <div class="hints">
-        <button class="btn ghost" id="hintLetter">Anfangsbuchstabe (−500)</button>
-        <button class="btn ghost" id="hintCircle">Umkreis eingrenzen (−1000)</button>
-      </div>
       <button class="btn" id="btnGuess" disabled>Tipp abgeben</button>
     </div>
     <div id="resultBox"></div>
@@ -417,7 +419,6 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
        <input type="text" id="pkQuery" placeholder="Station suchen, z. B. Luzern" autocomplete="off">
        <button class="btn" id="pkGo">Plakat erstellen</button>
      </div>
-     <div class="hintline">Oder auf der Karte ein Haltestellensymbol anklicken. Hier sind die Namen sichtbar.</div>
      <div id="map2"></div>
    </div>
    <div id="pkSheet" hidden></div>
@@ -652,11 +653,10 @@ const selectedArea=()=>CFG.kt.reduce((a,k)=>a+(KT_AREA[k]||0),0);
 
 /* Punkteskala richtet sich nach der Grösse des gewählten Gebiets:
    in der ganzen Schweiz wie bisher, in einem kleinen Kanton entsprechend enger. */
-const SCALE={d0:25,hint:30};
+const SCALE={d0:25};
 function updateScale(){
   const a=Math.max(25,selectedArea());
   SCALE.d0=Math.max(0.8,Math.sqrt(a)/8);
-  SCALE.hint=Math.max(1,Math.min(30,Math.round(Math.sqrt(a)/7)));
 }
 
 /* ---------- Konfiguration ---------- */
@@ -897,7 +897,7 @@ function ptOnly(m,forceText){
   m=m||map;
   if(!m||!m.getStyle()) return;
   const layers=m.getStyle().layers||[];
-  const showText=forceText||CFG.showLabels||window.__revealed;
+  const showText=forceText||PK.pick||CFG.showLabels||window.__revealed;
   if(!m.__orig) m.__orig=new Map();
   const origLayout=m.__orig;
   const OWN=['ktmask','ktmaskline','ktline','chline','linefx','circlefx','circlefx-l'];
@@ -1122,7 +1122,7 @@ function setGuessBtn(t,flash){
 function clearMarks(){
   if(guessMarker){guessMarker.remove();guessMarker=null}
   if(truthMarker){truthMarker.remove();truthMarker=null}
-  ['linefx','circlefx'].forEach(id=>{
+  ['linefx'].forEach(id=>{
     if(map.getLayer(id)) map.removeLayer(id);
     if(map.getLayer(id+'-l')) map.removeLayer(id+'-l');
     if(map.getSource(id)) map.removeSource(id);
@@ -1134,21 +1134,6 @@ function drawLine(a,b){
   map.addLayer({id:'linefx',type:'line',source:'linefx',
     paint:{'line-color':'#EB0000','line-width':2,'line-dasharray':[2,2]}});
 }
-function drawCircle(c,km){
-  const pts=[],R=6371;
-  for(let i=0;i<=64;i++){
-    const t=i/64*2*Math.PI;
-    pts.push([c.lon+(km/R)*(180/Math.PI)*Math.sin(t)/Math.cos(c.lat*Math.PI/180),
-              c.lat+(km/R)*(180/Math.PI)*Math.cos(t)]);
-  }
-  map.addSource('circlefx',{type:'geojson',data:{type:'Feature',
-    geometry:{type:'Polygon',coordinates:[pts]}}});
-  map.addLayer({id:'circlefx',type:'fill',source:'circlefx',
-    paint:{'fill-color':'#EB0000','fill-opacity':.08}});
-  map.addLayer({id:'circlefx-l',type:'line',source:'circlefx',
-    paint:{'line-color':'#EB0000','line-width':1.5}});
-}
-
 /* Die volle Punktzahl soll dort liegen, wo das Piktogramm gezeichnet ist:
    die Koordinate der Fahrplan-API wird auf das Kartensymbol gezogen. */
 function snapToSymbol(p,name){
@@ -1177,7 +1162,7 @@ function snapToSymbol(p,name){
 }
 
 /* ---------- Spielzustand ---------- */
-const state={round:0,total:0,log:[],stop:null,board:null,guess:null,guessName:'',penalty:0,timer:null,lastGameT:0,recentModes:[],next:null,prefetching:false};
+const state={round:0,total:0,log:[],stop:null,board:null,guess:null,guessName:'',timer:null,lastGameT:0,recentModes:[],next:null,prefetching:false};
 
 function candidates(){
   let list=POOL.bahn.slice();
@@ -1264,14 +1249,11 @@ async function prefetch(){
 
 async function newRound(){
   window.__revealed=false;
-  state.round++; state.guess=null; state.guessName=''; state.penalty=0;
+  state.round++; state.guess=null; state.guessName='';
   $('roundNo').textContent=state.round;
   $('resultBox').innerHTML='';
   $('controls').style.display='flex';
   $('btnGuess').disabled=true;
-  $('hintLetter').disabled=false; $('hintCircle').disabled=false;
-  $('hintLetter').textContent='Anfangsbuchstabe (−500)';
-  $('hintCircle').textContent='Umkreis eingrenzen (−1000)';
   setGuessBtn('Haltestelle auf der Karte wählen');
   $('mystery').className='mystery';
   $('mystery').innerHTML='<b>Standort:</b> <span class="q">? ? ?</span> Anzeige mit Echtzeitdaten. An welcher Haltestelle hängt sie?';
@@ -1378,7 +1360,7 @@ function reveal(){
     if(sn) truth=sn;
   }
   const km=hit?0:haversine(state.guess,truth);
-  const pts=Math.max(0,(hit?5000:scoreFor(km))-state.penalty);
+  const pts=hit?5000:scoreFor(km);
   state.total+=pts;
   state.log.push({name:state.stop.name,km,pts});
   noteResult(state.stop.name,km);
@@ -1396,7 +1378,7 @@ function reveal(){
     '<div class="result">'+
       '<h2>'+esc(state.stop.name)+'</h2>'+
       '<div class="dist">'+(hit?'Richtige Haltestelle getroffen':fmtDist(km)+' daneben')+
-        (state.penalty?' · '+state.penalty+' Punkte für Hinweise':'')+'</div>'+
++'</div>'+
       '<div class="scoreline"><span class="pts">'+pts+'</span><span class="of">von 5000 Punkten</span></div>'+
       '<div class="bar"><span style="width:'+(pts/50)+'%"></span></div>'+
       '<button class="btn" id="btnNext">'+(last?'Auswertung ansehen':'Nächste Runde')+'</button>'+
@@ -1443,20 +1425,6 @@ function finish(){
   $('btnShowStats').onclick=()=>openStats('games');
 }
 
-/* ---------- Hinweise ---------- */
-$('hintLetter').onclick=()=>{
-  if(!state.stop||window.__revealed) return;
-  state.penalty+=500; $('hintLetter').disabled=true;
-  const n=state.stop.name;
-  $('mystery').innerHTML='<b>Standort:</b> <span class="q">'+esc(n[0])+' …</span> Beginnt mit „'+esc(n[0])+'“, '+n.replace(/\s/g,'').length+' Zeichen.';
-};
-$('hintCircle').onclick=()=>{
-  if(!state.stop||!mapReady||window.__revealed) return;
-  state.penalty+=1000; $('hintCircle').disabled=true;
-  const r=SCALE.hint,j=()=>(Math.random()-.5)*(r/160);
-  drawCircle({lat:state.stop.lat+j(),lon:state.stop.lon+j()*1.4},r);
-  $('hintCircle').textContent='Umkreis '+r+' km eingegrenzt';
-};
 $('btnGuess').onclick=()=>{ if(state.guess&&!window.__revealed) reveal(); };
 $('btnFold').onclick=()=>{
   const p=$('panel'); p.classList.toggle('min');
