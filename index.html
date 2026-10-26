@@ -1038,6 +1038,7 @@ async function buildMap(){
       if(g){
         const pr=g.properties||{};
         const nm=pr.name||pr.stop_name||pr.name_de||pr.label;
+        PK.pickMode=iconMode(g);
         if(nm) loadPoster(nm);
       }
       return;
@@ -1657,7 +1658,7 @@ function lineHtml(line,d){
   if(d&&modeOf(d)==='bus'){
     const bg=d.bg||'#FFCC00',fg=d.fg||'#000000';
     return '<span class="pk-bus" style="background:'+esc(bg)+';color:'+esc(fg)+'">'+
-      esc(String(line||'').replace(/^B\s*/i,''))+'</span>';
+      esc(String(line||'').replace(/^(BN|BP|EXB|KB|RUB|NFB|BUS|B)\s*/i,'')||String(line||''))+'</span>';
   }
   const p=splitLine(line);
   /* U+2060 Wortverbinder links und rechts des Zwischenraums: damit gibt es
@@ -1919,13 +1920,19 @@ async function loadPoster(stopName){
     if(k){
       const ks=sollNearby(k);
       say('Sollfahrplan wird geladen …');
-      let rows=[];
-      for(const kk of ks){ try{ rows=rows.concat(await sollRows(kk)); }catch(e){} }
+      let own=[],rows=[];
+      try{ own=await sollRows(k); }catch(e){}
+      const mode=PK.pickMode||majorityMode(own);
+      PK.pickMode=mode;
+      rows=own;
+      for(const kk of ks.slice(1)){ try{ rows=rows.concat(await sollRows(kk)); }catch(e){} }
+      rows=keepMode(rows,mode);
       PK.loading=false;
       if(!rows.length){ posterEmpty(); return; }
       PK.rows=rows.sort((a,b)=>(a.when.getHours()*60+a.when.getMinutes())-(b.when.getHours()*60+b.when.getMinutes()));
       PK.stop={name:sollName(k),id:sid7(k)};
-      PK.stops=ks.map(sollName);
+      const used={}; rows.forEach(d=>used[d.stopKey]=1);
+      PK.stops=ks.filter(x=>used[x]).map(sollName);
       PK.source='soll';
       PK.parts=buildParts(PK.rows);
       PK.sel=PK.parts.map((p,i)=>i);
@@ -1963,8 +1970,11 @@ async function loadPoster(stopName){
       });
     }),3);
     PK.loading=false;
-    if(!live.length){ posterEmpty(); return; }
-    PK.rows=live.sort((a,b)=>a.when-b.when).map(d=>Object.assign(d,{pat:'111'}));
+    const lm=PK.pickMode||majorityMode((base.deps||[]));
+    PK.pickMode=lm;
+    const liveK=keepMode(live,lm);
+    if(!liveK.length){ posterEmpty(); return; }
+    PK.rows=liveK.sort((a,b)=>a.when-b.when).map(d=>Object.assign(d,{pat:'111'}));
     PK.liveAt=new Date();
     PK.stop=base; PK.stops=stops;
     PK.parts=buildParts(PK.rows);
@@ -1990,8 +2000,11 @@ async function loadPoster(stopName){
     if(!merged[k].d.track&&d.track) merged[k].d.track=d.track;
     if((d.via||[]).length>(merged[k].d.via||[]).length) merged[k].d.via=d.via;
   }));
-  PK.rows=Object.keys(merged).map(k=>Object.assign({},merged[k].d,{pat:merged[k].pat.join('')}))
+  const am=PK.pickMode||majorityMode(base.deps||[]);
+  PK.pickMode=am;
+  PK.rows=keepMode(Object.keys(merged).map(k=>Object.assign({},merged[k].d,{pat:merged[k].pat.join('')})),am)
     .sort((a,b)=>(a.when.getHours()*60+a.when.getMinutes())-(b.when.getHours()*60+b.when.getMinutes()));
+  if(!PK.rows.length){ posterEmpty(); return; }
   PK.stop=base; PK.stops=stops;
   PK.parts=buildParts(PK.rows);
   PK.sel=PK.parts.map((p,i)=>i);        /* zu Beginn alle Teile */
@@ -2037,16 +2050,46 @@ function opShort(op){
   return o.split(/[\s,(]/)[0];
 }
 function modeOf(d){
-  const t=String(d.type||'').toLowerCase(),pre=splitLine(d.line).pre;
-  if(/tram|nft/.test(t)||/^(T|NFT|TRO)$/.test(pre)) return 'tram';
-  if(/bus|post|nfb/.test(t)||/^(B|BUS|NFB|KB|EXB|EB|BN|BP|RUB|TX|CAR|NB|NFO)$/.test(pre)) return 'bus';
-  if(/ship|schiff|boat|\bbat\b/.test(t)||/^(BAT|FAE|BAV|SCH)$/.test(pre)) return 'schiff';
+  const t=String(d.type||'').toLowerCase(),line=String(d.line||'').trim();
+  const pre=(line.match(/^[A-Za-zÄÖÜ]+/)||[''])[0].toUpperCase();
+  if(/ersatz/.test(t)||/^EV/.test(pre)) return 'ersatz';
+  if(/ship|schiff|boat|\bbat\b/.test(t)||/^(BAT|FAE|BAV|SCH)/.test(pre)) return 'schiff';
   if(/funicular|standseil|luftseil|cable|gondel|seilbahn|zahnrad|rack/.test(t)||
-     /^(FUN|PB|GB|SL|ASC|CC|SLB)$/.test(pre)) return 'berg';
+     /^(FUN|PB|GB|ASC|CC)/.test(pre)||(/^SL/.test(pre)&&!/^SL\s*\d/i.test(line))) return 'berg';
+  if(/tram|nft/.test(t)||/^(T|NFT|TRO)$/.test(pre)) return 'tram';
+  if(/bus|post|nfb/.test(t)||/^(B|BUS|NFB|KB|EXB|EB|RUB|TX|CAR|NB|NFO|BP)$/.test(pre)||/^BN/.test(pre)) return 'bus';
   return 'bahn';
 }
+/* Verkehrsmittel des angeklickten Kartensymbols, soweit die Kartenebene
+   es verrät; sonst entscheidet später die Mehrheit der Abfahrten. */
+function iconMode(f){
+  if(!f) return null;
+  const key=(((f.layer&&f.layer.id)||'')+' '+(f.sourceLayer||'')+' '+
+    Object.keys(f.properties||{}).map(k=>k+'='+f.properties[k]).join(' ')).toLowerCase();
+  if(/ferry|ship|boat|schiff|bateau/.test(key)) return 'schiff';
+  if(/funicular|gondola|aerial|cable|chair|seilbahn/.test(key)) return 'berg';
+  if(/tram/.test(key)) return 'tram';
+  if(/\bbus|_bus|bus_|bus\b/.test(key)) return 'bus';
+  if(/rail|train|bahn|station_rail/.test(key)) return 'bahn';
+  return null;
+}
+function majorityMode(rows){
+  const c={};
+  rows.forEach(d=>{ const m=modeOf(d); if(m!=='ersatz') c[m]=(c[m]||0)+1; });
+  let best=null; for(const m in c) if(!best||c[m]>c[best]) best=m;
+  return best;
+}
+/* Nur gleiche Verkehrsmittel wie das gewählte Symbol; Ersatzverkehr kommt
+   dazu, weil er Bahn oder Tram an dieser Station ersetzt. */
+function keepMode(rows,mode){
+  if(!mode) return rows;
+  return rows.filter(d=>{
+    const m=modeOf(d);
+    return m===mode||(m==='ersatz'&&(mode==='bahn'||mode==='tram'));
+  });
+}
 const trackNum=t=>{ const m=/(\d+)/.exec(String(t||'')); return m?m[1]:''; };
-const MODENAME={tram:'Tram',bus:'Bus',schiff:'Schiff',berg:'Berg- und Seilbahnen'};
+const MODENAME={bahn:'Bahn',tram:'Tram',bus:'Bus',schiff:'Schiff',berg:'Berg- und Seilbahnen',ersatz:'Ersatzverkehr'};
 
 function buildParts(rows){
   const byMode={};
@@ -2094,7 +2137,7 @@ function buildParts(rows){
       parts.sort((a,b)=>b.rows.length-a.rows.length);
     }
   }
-  ['tram','bus','schiff','berg'].forEach(m=>{
+  ['tram','bus','schiff','berg','ersatz'].forEach(m=>{
     if(byMode[m]&&byMode[m].length)
       parts.push({key:m,label:MODENAME[m],rows:byMode[m],tracks:{}});
   });
@@ -2108,8 +2151,10 @@ function trackRange(tr){
 }
 
 function posterEmpty(){
+  const m=PK.pickMode&&MODENAME[PK.pickMode];
   $('pkSheet').innerHTML='<div class="pk-head"><h3>Keine Abfahrten gefunden</h3>'+
-    '<div class="sub">Andere Schreibweise versuchen oder in den Einstellungen die Fahrplanquelle wechseln.</div></div>'+
+    '<div class="sub">'+(m?'An dieser Station verkehrt im gewählten Verkehrsmittel ('+esc(m)+') nichts. ':'')+
+    'Andere Schreibweise versuchen oder in den Einstellungen die Fahrplanquelle wechseln.</div></div>'+
     '<div class="pk-tools"><button class="chip" id="pkBack">Zurück zur Karte</button></div>';
   $('pkBack').onclick=pkBack;
 }
@@ -2223,7 +2268,8 @@ function renderPoster(){
       '<span class="pk-ico">🚆</span>'+
       '<h2>Abfahrt</h2><span>Départ · Partenza · Departure</span></div>'+
     '<div class="pk-head"><h3>'+esc(PK.stop.name)+'</h3>'+
-      '<div class="sub">'+
+      '<div class="sub">'+(PK.pickMode&&MODENAME[PK.pickMode]?esc(MODENAME[PK.pickMode])+
+        (PK.pickMode==='bahn'||PK.pickMode==='tram'?' inkl. Ersatzverkehr':'')+' · ':'')+
       (PK.mode==='live'
         ? 'Echtzeit · Stand '+(PK.liveAt?hhmm(PK.liveAt):'–')+' Uhr · nächste '+rows.length+' Abfahrten'
         : PK.source==='soll'
@@ -2356,7 +2402,7 @@ function pkBack(){
   if(map) setTimeout(()=>map.resize(),50);
 }
 
-$('pkGo').onclick=()=>{ const q=$('pkQuery').value.trim(); if(q) loadPoster(q); };
+$('pkGo').onclick=()=>{ const q=$('pkQuery').value.trim(); if(q){ PK.pickMode=null; loadPoster(q); } };
 $('pkQuery').addEventListener('keydown',e=>{ if(e.key==='Enter') $('pkGo').click(); });
 
 
