@@ -67,7 +67,7 @@ main{position:relative;flex:1;min-height:0;overflow:hidden}
 .ci{width:100%;line-height:1;color:#fff}
 .ci-banner{
   position:relative;min-height:calc(4.73*var(--f));background:var(--ci-red);
-  padding:calc(.64*var(--f)) calc(2.73*var(--f)) calc(.64*var(--f)) calc(2.82*var(--f));
+  padding:calc(.64*var(--f)) calc(2.6*var(--f)) calc(1.1*var(--f)) calc(2.82*var(--f));
 }
 .ci-ico{
   position:absolute;left:calc(.55*var(--f));top:calc(1.09*var(--f));
@@ -76,13 +76,31 @@ main{position:relative;flex:1;min-height:0;overflow:hidden}
   display:flex;align-items:center;justify-content:center;
   font-size:calc(1.09*var(--f));line-height:1;
 }
-.mystery{font-size:var(--f);line-height:calc(1.18*var(--f));color:#fff}
-.mystery b{font-weight:700}
-.mystery .q{display:inline-block;background:#fff;color:var(--ci-red);font-weight:700;
-  padding:0 calc(.55*var(--f));letter-spacing:.18em}
-.mystery.revealed .q{letter-spacing:0}
-.ci-dots{position:absolute;right:calc(.55*var(--f));bottom:calc(.45*var(--f));display:flex;gap:3px}
-.ci-dots i{width:calc(.36*var(--f));height:calc(.36*var(--f));border-radius:50%;border:1px solid #fff}
+.ci-msg{font-size:var(--f);line-height:calc(1.18*var(--f));color:#fff;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.ci-msg b{font-weight:700}
+.ci-fold{
+  position:absolute;right:calc(.5*var(--f));top:calc(.5*var(--f));
+  width:calc(1.6*var(--f));height:calc(1.6*var(--f));line-height:1;
+  border:1px solid rgba(255,255,255,.75);background:none;color:#fff;
+  border-radius:calc(.25*var(--f));font-size:calc(.9*var(--f));cursor:pointer;padding:0;
+}
+/* Haltestellenname, im Original der blaue Bereich über den Spaltentiteln */
+.ci-stop{
+  background:var(--ci-bg);color:#fff;font-weight:700;
+  font-size:calc(1.45*var(--f));line-height:1.15;
+  padding:calc(.5*var(--f)) calc(.45*var(--f)) calc(.45*var(--f));
+}
+.ci-stop .q{display:inline-block;background:repeating-linear-gradient(135deg,#3D6296 0 8px,#27497A 8px 16px);
+  color:#fff;padding:0 calc(.4*var(--f));letter-spacing:.2em}
+.ci-stop .sub{display:block;font-weight:400;font-size:calc(.72*var(--f));
+  color:var(--ci-stops);margin-top:calc(.25*var(--f))}
+.ci-stop.revealed .q{background:none;padding:0;letter-spacing:0}
+.ci-dots{position:absolute;right:calc(.55*var(--f));bottom:calc(.45*var(--f));
+  display:flex;gap:3px;flex-wrap:wrap;max-width:60%;justify-content:flex-end}
+.ci-dots i{width:calc(.36*var(--f));height:calc(.36*var(--f));border-radius:50%;
+  border:1px solid #fff;cursor:pointer}
+.ci-dots i.on{background:#fff}
 .ci-head,.deps li{
   display:grid;
   grid-template-columns:calc(3.55*var(--f)) calc(2.82*var(--f)) 1fr calc(4.64*var(--f)) calc(8.09*var(--f));
@@ -266,6 +284,15 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 .pk-score{font-weight:700;font-size:13px;margin-left:auto}
 
 .pk-body{padding:8px clamp(10px,3vw,18px) 40px;column-gap:26px;column-fill:balance}
+.pk-body.live .pk-row,.pk-colhead.live{
+  grid-template-columns:calc(1.08*var(--p)) calc(3.4*var(--p)) calc(4.8*var(--p)) 1fr
+    calc(2.5*var(--p)) calc(5.2*var(--p));
+}
+.pk-delay{font-weight:700;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.pk-delay.late{color:#B00000}
+.pk-delay.out{color:#fff;background:#EB0000;padding:0 3px;border-radius:2px;font-size:calc(.82*var(--p))}
+.pk-mode{display:flex;gap:4px;align-items:center;margin-right:10px}
+.pk-mode .chip{border-color:#000}
 @media (min-width:900px){ .pk-body{column-count:2} }
 @media (min-width:1350px){ .pk-body{column-count:3} }
 @media (min-width:1800px){ .pk-body{column-count:4} }
@@ -389,11 +416,13 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
  <div class="view" id="viewGame">
   <section class="panel" id="panel">
     <div class="ci">
-      <div class="ci-banner">
+      <div class="ci-banner" id="banner">
         <span class="ci-ico">⚡</span>
-        <div class="mystery" id="mystery"><b>Standort:</b> <span class="q">? ? ?</span> Anzeige mit Echtzeitdaten. An welcher Haltestelle hängt sie?</div>
-        <span class="ci-dots"><i class="on"></i><i></i></span>
+        <div class="ci-msg" id="disrText">Betriebslage wird geladen …</div>
+        <button class="ci-fold" id="disrFold" title="Störungsmeldungen ausblenden">▾</button>
+        <span class="ci-dots" id="disrDots"></span>
       </div>
+      <div class="ci-stop" id="mystery"><span class="q">? ? ?</span></div>
       <div class="ci-head">
         <span class="clock" id="clock">--:--:--</span>
         <span>Nach</span><span>Gleis</span><span>Hinweis</span>
@@ -532,6 +561,8 @@ const NETZE={
   rne  :{g:'S-Bahn und RER',label:'RER Neuchâtel',      tag:'sbahn',kt:['NE']},
   rva  :{g:'S-Bahn und RER',label:'RegionAlps Wallis',  tag:'sbahn',kt:['VS']},
   tilo :{g:'S-Bahn und RER',label:'TILO Tessin',        tag:'sbahn',kt:['TI']},
+  ssh  :{g:'S-Bahn und RER',label:'S-Bahn Schaffhausen', tag:'sbahn',kt:['SH','ZH','TG']},
+  sju  :{g:'S-Bahn und RER',label:'RER Jura',            tag:'sbahn',kt:['JU','BE','NE']},
   /* --- Fern- und Regionalverkehr nach Unternehmen --- */
   fv   :{g:'Bahnunternehmen',label:'Fernverkehr',       tag:'fv'},
   sbb  :{g:'Bahnunternehmen',label:'SBB',               op:'sbb|cff|ffs|bundesbahn'},
@@ -554,6 +585,16 @@ const NETZE={
   tmr  :{g:'Bahnunternehmen',label:'TMR Martigny',      op:'\\btmr\\b|martigny'},
   fart :{g:'Bahnunternehmen',label:'FART Centovalli',   op:'fart|centovalli|vigezzina'},
   asm  :{g:'Bahnunternehmen',label:'ASm Oberaargau',    op:'\\basm\\b|aare seeland'},
+  leb  :{g:'Bahnunternehmen',label:'LEB Lausanne–Echallens',op:'\\bleb\\b|echallens'},
+  mbcb :{g:'Bahnunternehmen',label:'MBC Morges–Bière',   op:'\\bmbc\\b|bière|\\bbam\\b'},
+  tpcb :{g:'Bahnunternehmen',label:'TPC Chablais',       op:'\\btpc\\b|chablais'},
+  nstc :{g:'Bahnunternehmen',label:'NStCM Nyon–St-Cergue',op:'nstcm|st.?cergue'},
+  fw   :{g:'Bahnunternehmen',label:'Frauenfeld–Wil',     op:'frauenfeld.?wil'},
+  oebb :{g:'Bahnunternehmen',label:'OeBB Oensingen–Balsthal',op:'oensingen|\\boebb\\b'},
+  jb   :{g:'Bahnunternehmen',label:'Jungfraubahnen',     op:'jungfrau|\\bwab\\b|\\bbob\\b|wengernalp|berner oberland'},
+  ggb  :{g:'Bahnunternehmen',label:'Gornergratbahn',     op:'gornergrat|\\bggb\\b'},
+  rib  :{g:'Bahnunternehmen',label:'Rigi Bahnen',        op:'rigi'},
+  pib  :{g:'Bahnunternehmen',label:'Pilatus-Bahnen',     op:'pilatus'},
   /* --- Stadtverkehr --- */
   vbz  :{g:'Stadtverkehr',label:'VBZ Zürich',           op:'\\bvbz\\b|verkehrsbetriebe zürich'},
   bvb  :{g:'Stadtverkehr',label:'BVB Basel',            op:'\\bbvb\\b|basler verkehrs'},
@@ -569,6 +610,39 @@ const NETZE={
   zvb  :{g:'Stadtverkehr',label:'Zugerland ZVB',        op:'\\bzvb\\b|zugerland'},
   vmcv :{g:'Stadtverkehr',label:'VMCV Vevey-Montreux',  op:'vmcv'},
   rvbw :{g:'Stadtverkehr',label:'RVBW Baden',           op:'rvbw|regionale verkehrsbetriebe baden'},
+  tpfs :{g:'Stadtverkehr',label:'TPF Freiburg',         op:'\\btpf\\b|fribourgeois',tag:['tram','bus']},
+  vbbi :{g:'Stadtverkehr',label:'VB Biel',              op:'verkehrsbetriebe biel|biennois'},
+  trns :{g:'Stadtverkehr',label:'transN Neuchâtel',     op:'transn|\\btrn\\b',tag:['tram','bus']},
+  bsu  :{g:'Stadtverkehr',label:'BSU Solothurn',        op:'\\bbsu\\b|busbetrieb solothurn'},
+  aar  :{g:'Stadtverkehr',label:'AAR bus+bahn Aarau',   op:'aar bus|busbetrieb aarau|\\baar\\b'},
+  vbg  :{g:'Stadtverkehr',label:'VBG Glattal',          op:'glattal|\\bvbg\\b'},
+  vzo  :{g:'Stadtverkehr',label:'VZO Zürichsee-Oberland',op:'\\bvzo\\b|zürichsee und oberland'},
+  limb :{g:'Stadtverkehr',label:'Limmat Bus',           op:'limmat ?bus'},
+  vbsh :{g:'Stadtverkehr',label:'VBSH Schaffhausen',    op:'vbsh|verkehrsbetriebe schaffhausen'},
+  sti  :{g:'Stadtverkehr',label:'STI Thun',             op:'\\bsti\\b|steffisburg'},
+  regb :{g:'Stadtverkehr',label:'Regiobus Ostschweiz',  op:'regiobus'},
+  wilm :{g:'Stadtverkehr',label:'WilMobil',             op:'wil ?mobil'},
+  bosx :{g:'Stadtverkehr',label:'Bus Ostschweiz',       op:'bus ostschweiz'},
+  stfr :{g:'Stadtverkehr',label:'Stadtbus Frauenfeld',  op:'stadtbus frauenfeld'},
+  tpn  :{g:'Stadtverkehr',label:'TPN Nyon',             op:'\\btpn\\b|nyonnaise'},
+  amsa :{g:'Stadtverkehr',label:'AMSA Mendrisiotto',    op:'\\bamsa\\b|mendrisiens'},
+  aagl :{g:'Stadtverkehr',label:'AAGL Liestal',         op:'\\baagl\\b|autobus ag liestal'},
+  aags :{g:'Stadtverkehr',label:'AAGS Schwyz',          op:'\\baags\\b|auto ag schwyz'},
+  aagu :{g:'Stadtverkehr',label:'AAGU Uri',             op:'\\baagu\\b|auto ag uri'},
+  busl :{g:'Stadtverkehr',label:'Busland Emmental',     op:'busland'},
+  bogg :{g:'Stadtverkehr',label:'BOGG Olten',           op:'\\bbogg\\b|gösgen'},
+  bgu  :{g:'Stadtverkehr',label:'BGU Grenchen',         op:'\\bbgu\\b|busbetrieb grenchen'},
+  engb :{g:'Stadtverkehr',label:'Engadin Bus',          op:'engadin ?bus'},
+  bsw  :{g:'Stadtverkehr',label:'Bus Sarganserland',    op:'sarganserland|\\bbsw\\b'},
+  rtb  :{g:'Stadtverkehr',label:'RTB Rheintal Bus',     op:'rheintal ?bus|\\brtb\\b'},
+  /* --- Schifffahrt --- */
+  zsg  :{g:'Schifffahrt',label:'ZSG Zürichsee',         tag:'schiff',op:'\\bzsg\\b|zürichsee'},
+  sgv  :{g:'Schifffahrt',label:'SGV Vierwaldstättersee',tag:'schiff',op:'\\bsgv\\b|vierwaldst'},
+  blss :{g:'Schifffahrt',label:'BLS Schifffahrt',       tag:'schiff',op:'\\bbls\\b|thuner|brienzer'},
+  cgn  :{g:'Schifffahrt',label:'CGN Genfersee',         tag:'schiff',op:'\\bcgn\\b|léman'},
+  urh  :{g:'Schifffahrt',label:'URh Untersee und Rhein',tag:'schiff',op:'\\burh\\b|untersee'},
+  sbsb :{g:'Schifffahrt',label:'SBS Bodensee',          tag:'schiff',op:'\\bsbs\\b|bodensee'},
+  lagm :{g:'Schifffahrt',label:'Lago Maggiore und Lugano',tag:'schiff',op:'maggiore|navigazione'},
   /* --- PostAuto nach den Regionen der Postauto-Website --- */
   pabe :{g:'PostAuto-Regionen',label:'Bern',          tag:'bus',op:'postauto|carpostale|autopostale',kt:['BE']},
   pagr :{g:'PostAuto-Regionen',label:'Graubünden',    tag:'bus',op:'postauto|carpostale|autopostale',kt:['GR']},
@@ -819,7 +893,10 @@ function boardInfo(board){
 }
 const asInfo=v=>Array.isArray(v)?{tags:v,ops:[]}:(v||null);
 function netMatch(n,entry,info){
-  if(n.tag && info.tags.indexOf(n.tag)<0) return false;
+  if(n.tag){
+    const want=Array.isArray(n.tag)?n.tag:[n.tag];
+    if(!want.some(t=>info.tags.indexOf(t)>=0)) return false;
+  }
   if(n.kt && n.kt.indexOf(entry.kt)<0) return false;
   if(n.op && info.ops.length){
     const re=new RegExp(n.op,'i');
@@ -1255,8 +1332,8 @@ async function newRound(){
   $('controls').style.display='flex';
   $('btnGuess').disabled=true;
   setGuessBtn('Haltestelle auf der Karte wählen');
-  $('mystery').className='mystery';
-  $('mystery').innerHTML='<b>Standort:</b> <span class="q">? ? ?</span> Anzeige mit Echtzeitdaten. An welcher Haltestelle hängt sie?';
+  $('mystery').className='ci-stop';
+  $('mystery').innerHTML='<span class="q">? ? ?</span>';
   clearMarks();
   if(mapReady) homeView();
   ptOnly();
@@ -1368,17 +1445,16 @@ function reveal(){
     .concat(STORE.read('og.rounds',[])).slice(0,300));
   $('totalPts').textContent=state.total;
 
-  $('mystery').className='mystery revealed';
-  $('mystery').innerHTML='<b>Standort:</b> <span class="q">'+esc(state.stop.name)+'</span> '+
-    (KANTONE[state.stop.kt]||'')+', DiDok/UIC '+esc(state.stop.id||'–')+'.';
+  $('mystery').className='ci-stop revealed';
+  $('mystery').innerHTML='<span class="q">'+esc(state.stop.name)+'</span>'+
+    '<span class="sub">'+esc(KANTONE[state.stop.kt]||'')+' · DiDok/UIC '+esc(state.stop.id||'–')+'</span>';
   $('controls').style.display='none';
 
   const last=CFG.rounds>0&&state.round>=CFG.rounds;
   $('resultBox').innerHTML=
     '<div class="result">'+
       '<h2>'+esc(state.stop.name)+'</h2>'+
-      '<div class="dist">'+(hit?'Richtige Haltestelle getroffen':fmtDist(km)+' daneben')+
-+'</div>'+
+      '<div class="dist">'+(hit?'Richtige Haltestelle getroffen':fmtDist(km)+' daneben')+'</div>'+
       '<div class="scoreline"><span class="pts">'+pts+'</span><span class="of">von 5000 Punkten</span></div>'+
       '<div class="bar"><span style="width:'+(pts/50)+'%"></span></div>'+
       '<button class="btn" id="btnNext">'+(last?'Auswertung ansehen':'Nächste Runde')+'</button>'+
@@ -1568,7 +1644,9 @@ function showRoundMax(){
    Aushangs übernimmt.
    ===================================================================== */
 const PK={stop:null,blank:{time:false,line:false,dest:false,track:false},
-  rows:[],done:0,total:0,loading:false,pick:false};
+  rows:[],done:0,total:0,loading:false,pick:false,
+  mode:'plan',          /* plan = allgemein gültiger Fahrplan, live = Echtzeit */
+  liveTimer:null,liveAt:null};
 
 const FVMARK=/^(IC|ICE|IR|EC|EN|NJ|TGV|RJX?|PE|VAE|LEX|PEX|ICN)$/i;
 function splitLine(line){
@@ -1606,20 +1684,141 @@ const VT={
   '001':{s:'Ⓔ', t:'nur Sonntag und Feiertage'}
 };
 
+/* ---------- Sollfahrplan aus dem HRDF -----------------------------------
+   Liegt die Seite neben den aufbereiteten Daten (stops.json, meta.json,
+   fp/*.json), stammt der Fahrplan-Modus aus dem offiziellen Sollfahrplan
+   der Schweiz. Sonst greift der bisherige Weg über die Fahrplan-APIs.     */
+const SOLL={ok:null,idx:null,byName:null,meta:null,shards:{}};
+async function sollReady(){
+  if(SOLL.ok!==null) return SOLL.ok;
+  try{
+    const r=await fetch('stops.json',{cache:'force-cache'});
+    if(!r.ok) throw new Error(r.status);
+    SOLL.idx=await r.json();
+    try{ SOLL.meta=await (await fetch('meta.json')).json(); }catch(e){ SOLL.meta=null; }
+    SOLL.byName={};
+    for(const k in SOLL.idx){
+      const v=SOLL.idx[k]; if(v.length<3) continue;
+      (SOLL.byName[norm(v[0])]=SOLL.byName[norm(v[0])]||[]).push(k);
+    }
+    SOLL.ok=true;
+  }catch(e){ SOLL.ok=false; }
+  return SOLL.ok;
+}
+const sid7=k=>String(parseInt(k,36)).padStart(7,'0');
+const sollName=k=>(SOLL.idx[k]||[k])[0];
+function sollShard(p){
+  if(!SOLL.shards[p]) SOLL.shards[p]=fetch('fp/'+p+'.json',{cache:'force-cache'})
+    .then(r=>{ if(!r.ok) throw new Error(r.status); return r.json(); })
+    .catch(e=>{ delete SOLL.shards[p]; throw e; });
+  return SOLL.shards[p];
+}
+function sollFind(q){
+  const s=String(q||'').trim();
+  if(/^\d{1,7}$/.test(s)){ const k=parseInt(s,10).toString(36); if(SOLL.idx[k]&&SOLL.idx[k].length>2) return k; }
+  const n=norm(s);
+  if(SOLL.byName[n]) return SOLL.byName[n][0];
+  let best=null;
+  for(const nm in SOLL.byName) if(nm.indexOf(n)===0&&(!best||nm.length<best.length)) best=nm;
+  return best?SOLL.byName[best][0]:null;
+}
+/* Bahnhof, Bushaltestelle „…, Bahnhof" und Tramhaltestelle zusammennehmen */
+function sollNearby(k){
+  const b=SOLL.idx[k],out=[k];
+  if(!b||b.length<3) return out;
+  const stem=norm(String(b[0]).split(/[, ]/)[0]);
+  const cand=[];
+  for(const kk in SOLL.idx){
+    if(kk===k) continue;
+    const v=SOLL.idx[kk]; if(v.length<3) continue;
+    const nv=norm(v[0]);
+    if(nv.indexOf(stem)!==0) continue;
+    if(!/(bahnhof|bhf|gare|stazione|station)/.test(nv)&&nv!==norm(b[0])) continue;
+    const d=haversine({lat:b[1],lon:b[2]},{lat:v[1],lon:v[2]});
+    if(d<=0.45) cand.push([d,kk]);
+  }
+  cand.sort((a,c)=>a[0]-c[0]);
+  return out.concat(cand.slice(0,4).map(c=>c[1]));
+}
+async function sollRows(k){
+  const st=sid7(k),sh=await sollShard(st.slice(0,5)),data=sh.s[st];
+  if(!data) return [];
+  const base=new Date(); base.setHours(0,0,0,0);
+  const un=x=>parseInt(x,36);
+  return data.split(';').map(e=>{
+    const f=e.split(','),mn=un(f[0]);
+    const w=new Date(base); w.setHours(Math.floor((mn%1440)/60),mn%60,0,0);
+    return {when:w,line:sh.L[un(f[1])]||'',dest:sollName(f[2]),track:sh.T[un(f[3])]||'',
+      pv:un(f[4]),op:sh.O[un(f[5])]||'',type:'',stopKey:k,
+      via:(f[6]||'').split(' ').filter(Boolean).map(sollName)};
+  });
+}
+/* Verkehrstage in Worte fassen; die Zeichen werden je Aushang vergeben */
+const WDN=['Mo','Di','Mi','Do','Fr','Sa','So'];
+function vtText(pv){
+  const m=pv&127,full=!!(pv&128),hol=!!(pv&256);
+  if(m===127&&full) return '';
+  let t;
+  if(m===127) t='täglich';
+  else if(m===31) t='Mo–Fr';
+  else if(m===63) t='Mo–Sa';
+  else if(m===96) t='Sa, So';
+  else if(m===32) t='Sa';
+  else if(m===64) t='So';
+  else if(m===95) t='täglich ausser Sa';
+  else if(m===62) t='Di–Sa';
+  else if(m===30) t='Di–Fr';
+  else t=WDN.filter((x,i)=>m>>i&1).join(', ');
+  if(hol&&(m&64)&&m!==127) t+=' und allg. Feiertage';
+  else if(hol&&!(m&64)) t+=' sowie allg. Feiertage';
+  else if(!hol&&(m&31)) t+=' ausser allg. Feiertage';
+  if(!full) t+=', nicht an allen Tagen';
+  return t;
+}
+function vtSymbol(d){
+  if(PK.mode==='live') return VT['111'];
+  if(d.pv==null) return VT[d.pat]||VT['111'];
+  const t=vtText(d.pv);
+  if(!t) return VT['111'];
+  if(!PK.vtSym[t]){
+    const n=Object.keys(PK.vtSym).length;
+    PK.vtSym[t]={s:n<26?String.fromCharCode(0x24B6+n):'('+(n+1)+')',t:t};
+  }
+  return PK.vtSym[t];
+}
+
 const stampISO=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 const hhmm=d=>pad(d.getHours())+':'+pad(d.getMinutes());
 const depKey=d=>pad(d.when.getHours())+pad(d.when.getMinutes())+'|'+
   (d.line||'').replace(/\s/g,'')+'|'+(d.dest||'');
 
-async function boardAt(stop,when){
+/* search.ch führt Gattung und Linie getrennt: *G ist die Gattung, *L die
+   Linienbezeichnung. Das Feld line enthält oft nur eines von beiden, bei
+   La Plaine etwa „L5" ohne das R davor. Hier wird beides zusammengesetzt,
+   sodass RL5 statt R erscheint. */
+function lineLabelCH(c){
+  const g=String(c['*G']||'').trim();
+  const l=String(c['*L']||'').trim();
+  let label=String(c.line||'').trim();
+  if(!label) label=l;
+  if(g){
+    if(!label) label=g;
+    else if(!new RegExp('^'+g.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i').test(label)) label=g+label;
+  }
+  return label||String(c.type_name||'');
+}
+
+async function boardAt(stop,when,live){
   if(CFG.source==='searchch'){
     const u='https://search.ch/fahrplan/api/stationboard.json?stop='+encodeURIComponent(stop)
-      +'&limit=80&show_delays=0&show_tracks=1&show_subsequent_stops=1'
+      +'&limit=80&show_delays='+(live?1:0)+'&show_tracks=1&show_subsequent_stops=1'
       +'&date='+stampISO(when)+'&time='+hhmm(when);
     const j=await getJSON(u); if(!j||!j.stop) throw new Error('leer');
     return {name:j.stop.name,id:j.stop.id,lat:+j.stop.lat,lon:+j.stop.lon,
       deps:(j.connections||[]).map(c=>({when:parseLocal(c.time),
-        line:c.line||c['*L']||c.type_name||'',dest:(c.terminal&&c.terminal.name)||'',
+        line:lineLabelCH(c),dest:(c.terminal&&c.terminal.name)||'',
+        delay:(function(d){ if(typeof d==='string') return /^\+?\d+$/.test(d)?parseInt(d,10):(d==='X'?'X':0);
+          return d||0; })(c.dep_delay),
         track:String(c.track||'').replace('!','').trim(),
         op:c.operator||c['*U']||c.g||'',type:(c.type||'')+' '+(c.type_name||''),
         bg:(c.color||'').split('~')[0]?'#'+(c.color||'').split('~')[0]:'',
@@ -1635,8 +1834,9 @@ async function boardAt(stop,when){
     deps:(j.stationboard||[]).map(e=>({when:parseWhen((e.stop||{}).departure),
       line:/^B/i.test(e.category||'')
         ? String(e.line||e.number||e.category||'').slice(0,5)
-        : (e.category||'')+(e.number?' '+e.number:''),
+        : (e.category||'')+(e.line?e.line:(e.number&&String(e.number).length<=3?e.number:'')),
       dest:e.to||'',track:String((e.stop||{}).platform||'').trim(),
+      delay:(e.stop||{}).delay||0,
       op:e.operator||'',type:e.category||'',
       via:(e.passList||[]).slice(1,-1).map(q=>q.station&&q.station.name).filter(Boolean).slice(0,3)}))};
 }
@@ -1714,6 +1914,27 @@ async function loadPoster(stopName){
       '<div class="sub">'+esc(t)+'</div></div>'; };
   say('Haltestelle wird gesucht …');
 
+  if(PK.mode==='plan'&&await sollReady()){
+    const k=sollFind(stopName);
+    if(k){
+      const ks=sollNearby(k);
+      say('Sollfahrplan wird geladen …');
+      let rows=[];
+      for(const kk of ks){ try{ rows=rows.concat(await sollRows(kk)); }catch(e){} }
+      PK.loading=false;
+      if(!rows.length){ posterEmpty(); return; }
+      PK.rows=rows.sort((a,b)=>(a.when.getHours()*60+a.when.getMinutes())-(b.when.getHours()*60+b.when.getMinutes()));
+      PK.stop={name:sollName(k),id:sid7(k)};
+      PK.stops=ks.map(sollName);
+      PK.source='soll';
+      PK.parts=buildParts(PK.rows);
+      PK.sel=PK.parts.map((p,i)=>i);
+      renderPoster();
+      return;
+    }
+  }
+  PK.source=PK.mode==='live'?'live':'api';
+
   let base=null;
   try{ base=await boardAt(stopName,new Date()); }catch(e){}
   if(!base||!base.name){
@@ -1727,6 +1948,31 @@ async function loadPoster(stopName){
     $('pkBack').onclick=pkBack; return;
   }
   const stops=await nearbyStops(base);
+
+  /* Echtzeitsituation: ein Abruf je Haltestelle, mit Verspätungen */
+  if(PK.mode==='live'){
+    say('Echtzeitlage wird abgerufen …');
+    const live=[],lseen={};
+    await runPool(stops.map(st=>async()=>{
+      let b; try{ b=await boardAt(st,new Date(),true); }catch(e){ return; }
+      (b.deps||[]).forEach(d=>{
+        if(!d.when||isNaN(d.when)) return;
+        const k=depKey(d)+'|'+d.when.getTime();
+        if(lseen[k]) return;
+        lseen[k]=1; live.push(d);
+      });
+    }),3);
+    PK.loading=false;
+    if(!live.length){ posterEmpty(); return; }
+    PK.rows=live.sort((a,b)=>a.when-b.when).map(d=>Object.assign(d,{pat:'111'}));
+    PK.liveAt=new Date();
+    PK.stop=base; PK.stops=stops;
+    PK.parts=buildParts(PK.rows);
+    PK.sel=PK.parts.map((p,i)=>i);
+    renderPoster();
+    return;
+  }
+
   const dates=refDates(),days=[[],[],[]],seen=[{},{},{}];
   const tasks=[];
   for(let i=0;i<dates.length;i++)
@@ -1734,12 +1980,7 @@ async function loadPoster(stopName){
       tasks.push.apply(tasks,windowTasks(st,dates[i],days[i],seen[i]));
   await runPool(tasks,6,(d,n)=>say('Abfahrten werden geladen … '+d+' von '+n));
   PK.loading=false;
-  if(!days[0].length){
-    $('pkSheet').innerHTML='<div class="pk-head"><h3>Keine Abfahrten gefunden</h3>'+
-      '<div class="sub">Andere Schreibweise versuchen oder in den Einstellungen die Fahrplanquelle wechseln.</div></div>'+
-      '<div class="pk-tools"><button class="chip" id="pkBack">Zurück zur Karte</button></div>';
-    $('pkBack').onclick=pkBack; return;
-  }
+  if(!days[0].length){ posterEmpty(); return; }
 
   const merged={};
   days.forEach((rows,di)=>rows.forEach(d=>{
@@ -1775,7 +2016,19 @@ const OPSHORT=[[/schweizerische bundesbahnen|\bsbb\b|\bcff\b|\bffs\b/i,'SBB'],
  [/centovalli|fart|vigezzina/i,'FART'],[/aare seeland|\basm\b/i,'ASm'],
  [/baselland transport|\bblt\b/i,'BLT'],[/nstcm|nyon.*morez/i,'NStCM'],
  [/postauto|carpostale|autopostale/i,'PostAuto'],[/gornergrat|\bggb\b/i,'GGB'],
- [/berner oberland|\bbob\b/i,'BOB'],[/wengernalp|\bwab\b/i,'WAB'],
+ [/berner oberland|\bbob\b/i,'BOB'],[/\bleb\b|echallens/i,'LEB'],
+ [/\bmbc\b|bière|\bbam\b/i,'MBC'],[/\btpc\b|chablais/i,'TPC'],
+ [/nstcm|st.?cergue/i,'NStCM'],[/frauenfeld.?wil/i,'Frauenfeld–Wil'],
+ [/\bsti\b|steffisburg/i,'STI'],[/verkehrsbetriebe biel|biennois/i,'VB Biel'],
+ [/\bbsu\b|busbetrieb solothurn/i,'BSU'],[/aar bus|busbetrieb aarau/i,'AAR bus+bahn'],
+ [/glattal|\bvbg\b/i,'VBG'],[/\bvzo\b/i,'VZO'],[/regiobus/i,'Regiobus'],
+ [/wil ?mobil/i,'WilMobil'],[/vbsh|verkehrsbetriebe schaffhausen/i,'VBSH'],
+ [/\btpn\b|nyonnaise/i,'TPN'],[/\bamsa\b|mendrisiens/i,'AMSA'],
+ [/\baagl\b/i,'AAGL'],[/\baags\b|auto ag schwyz/i,'AAGS'],[/\baagu\b|auto ag uri/i,'AAGU'],
+ [/busland/i,'Busland'],[/\bbogg\b/i,'BOGG'],[/\bbgu\b/i,'BGU'],
+ [/engadin ?bus/i,'Engadin Bus'],[/sarganserland/i,'BSW'],[/rheintal ?bus/i,'RTB'],
+ [/\bzsg\b/i,'ZSG'],[/\bsgv\b|vierwaldst/i,'SGV'],[/\bcgn\b/i,'CGN'],
+ [/\burh\b|untersee/i,'URh'],[/navigazione|maggiore/i,'NLM'],[/wengernalp|\bwab\b/i,'WAB'],
  [/jungfrau/i,'Jungfraubahn'],[/pilatus/i,'Pilatus-Bahnen'],[/rigi/i,'Rigi Bahnen']];
 function opShort(op){
   const o=String(op||'').trim();
@@ -1785,10 +2038,11 @@ function opShort(op){
 }
 function modeOf(d){
   const t=String(d.type||'').toLowerCase(),pre=splitLine(d.line).pre;
-  if(/tram|nft/.test(t)||pre==='T') return 'tram';
-  if(/bus|post|nfb/.test(t)||pre==='B'||pre==='BUS') return 'bus';
-  if(/ship|schiff|boat|\bbat\b/.test(t)||pre==='BAT') return 'schiff';
-  if(/funicular|standseil|luftseil|cable|gondel|seilbahn|zahnrad|rack/.test(t)) return 'berg';
+  if(/tram|nft/.test(t)||/^(T|NFT|TRO)$/.test(pre)) return 'tram';
+  if(/bus|post|nfb/.test(t)||/^(B|BUS|NFB|KB|EXB|EB|BN|BP|RUB|TX|CAR|NB|NFO)$/.test(pre)) return 'bus';
+  if(/ship|schiff|boat|\bbat\b/.test(t)||/^(BAT|FAE|BAV|SCH)$/.test(pre)) return 'schiff';
+  if(/funicular|standseil|luftseil|cable|gondel|seilbahn|zahnrad|rack/.test(t)||
+     /^(FUN|PB|GB|SL|ASC|CC|SLB)$/.test(pre)) return 'berg';
   return 'bahn';
 }
 const trackNum=t=>{ const m=/(\d+)/.exec(String(t||'')); return m?m[1]:''; };
@@ -1819,7 +2073,11 @@ function buildParts(rows){
       const uni=(a,b)=>{ const ra=find(a),rb=find(b); if(ra!==rb) parent[ra]=rb; };
       for(let i=0;i<keys.length;i++) for(let j=i+1;j<keys.length;j++){
         const a=ops[keys[i]].tracks,b=ops[keys[j]].tracks;
-        const shared=Object.keys(a).some(t=>b[t]);
+        /* gleiche Anlage, wenn ein Gleis geteilt wird oder die Gleise des einen
+           vollständig zwischen Gleisen des anderen liegen (TPF 4 zwischen SBB 2 und 5) */
+        const enclosed=(x,y)=>Object.keys(x).every(t=>
+          Object.keys(y).some(u=>+u<+t&&+t-+u<=2)&&Object.keys(y).some(u=>+u>+t&&+u-+t<=2));
+        const shared=Object.keys(a).some(t=>b[t])||enclosed(a,b)||enclosed(b,a);
         const unknown=!Object.keys(a).length||!Object.keys(b).length;
         if(shared||unknown) uni(keys[i],keys[j]);   /* ohne Gleisangabe nicht trennen */
       }
@@ -1849,17 +2107,27 @@ function trackRange(tr){
   return ns.length===1?'Gleis '+ns[0]:'Gleis '+ns[0]+'–'+ns[ns.length-1];
 }
 
+function posterEmpty(){
+  $('pkSheet').innerHTML='<div class="pk-head"><h3>Keine Abfahrten gefunden</h3>'+
+    '<div class="sub">Andere Schreibweise versuchen oder in den Einstellungen die Fahrplanquelle wechseln.</div></div>'+
+    '<div class="pk-tools"><button class="chip" id="pkBack">Zurück zur Karte</button></div>';
+  $('pkBack').onclick=pkBack;
+}
+
 /* Betriebstag beginnt nach der längsten Nachtlücke, wie auf dem Aushang */
 function orderHours(present){
+  /* Betriebstag ab 4 Uhr wie auf den Aushängen; frühere Stunden sind
+     Nachtverbindungen und folgen am Schluss. Liegt um 4 Uhr nichts vor,
+     beginnt der Tag mit der ersten Stunde nach der längsten Lücke. */
   const hs=present.slice().sort((a,b)=>a-b);
   if(!hs.length) return hs;
-  let gapAt=hs[0],gap=(hs[0]+24-hs[hs.length-1])%24;
-  for(let i=1;i<hs.length;i++){
-    const g=hs[i]-hs[i-1];
-    if(g>gap){ gap=g; gapAt=hs[i]; }
+  let start=4;
+  if(!hs.some(h=>h>=4&&h<=6)){
+    let gapAt=hs[0],gap=(hs[0]+24-hs[hs.length-1])%24;
+    for(let i=1;i<hs.length;i++){ const g=hs[i]-hs[i-1]; if(g>gap){ gap=g; gapAt=hs[i]; } }
+    start=gapAt;
   }
-  const idx=hs.indexOf(gapAt);
-  return hs.slice(idx).concat(hs.slice(0,idx));
+  return hs.slice().sort((a,b)=>((a-start+24)%24)-((b-start+24)%24));
 }
 
 function renderPoster(){
@@ -1872,6 +2140,7 @@ function renderPoster(){
   const hours=orderHours(Object.keys(byHour).map(Number));
   PK.total=0; PK.done=0;
   const usedVT={};
+  PK.vtSym={};
   const partChips=parts.length>1
     ? '<div class="pk-parts"><span>Stationsteile:</span>'+
       parts.map((p,i)=>'<button class="chip'+(PK.sel.indexOf(i)>=0?' on':'')+'" data-p="'+i+'">'+
@@ -1884,8 +2153,8 @@ function renderPoster(){
   hours.forEach(h=>{
     body+='<div class="pk-hour"><h4>'+h+' 00</h4><div class="rule"></div>';
     byHour[h].forEach((d,i)=>{
-      const vt=VT[d.pat]||VT['111'];
-      if(vt.s) usedVT[d.pat]=1;
+      const vt=vtSymbol(d);
+      if(vt.s) usedVT[vt.s]=vt;
       /* Schlüssel für stündlich wiederkehrende, sonst identische Einträge */
       const gk=esc(pad(d.when.getMinutes())+'|'+(d.line||'')+'|'+(d.dest||'')+'|'+(d.track||''));
       const time=PK.blank.time
@@ -1902,12 +2171,20 @@ function renderPoster(){
         ? '<input class="fill" data-k="track" data-g="'+gk+'" data-a="'+esc(d.track||'')+'" size="3" aria-label="Gleis">'
         : esc(d.track||'');
       ['time','line','dest','track'].forEach(k=>{ if(PK.blank[k]) PK.total++; });
+      let delay='';
+      if(PK.mode==='live'){
+        if(d.delay==='X') delay='<span class="pk-delay out">Ausfall</span>';
+        else if(typeof d.delay==='number'&&d.delay>0)
+          delay='<span class="pk-delay late">+'+d.delay+'\u2032</span>';
+        else delay='<span class="pk-delay">pünktlich</span>';
+      }
       body+='<div class="pk-row">'+
         '<span class="pk-fn">'+vt.s+'</span>'+
         '<span class="pk-time">'+time+'</span>'+
         '<span class="pk-line">'+line+'</span>'+
         '<span class="pk-dest">'+dest+'</span>'+
-        '<span class="pk-track">'+track+'</span></div>';
+        '<span class="pk-track">'+track+'</span>'+
+        (PK.mode==='live'?delay:'')+'</div>';
     });
     body+='</div>';
   });
@@ -1918,12 +2195,18 @@ function renderPoster(){
   const PRODNAME={IC:'InterCity',ICE:'InterCityExpress',IR:'InterRegio',EC:'EuroCity',
     RE:'RegioExpress',R:'Regio',S:'S-Bahn',SN:'Nacht-S-Bahn',PE:'PanoramaExpress',
     TGV:'TGV Lyria',EN:'EuroNight',NJ:'Nightjet',B:'Bus',T:'Tram',BAT:'Schiff',
-    VAE:'Voralpen-Express',LEX:'Luzern–Engelberg Express',PEX:'Panorama Express'};
+    VAE:'Voralpen-Express',LEX:'Luzern–Engelberg Express',PEX:'Panorama Express',
+    RL:'Regio Léman Express',SL:'S-Bahn Léman Express',RB:'Regionalbahn',RJX:'Railjet Xpress',
+    RJ:'Railjet',ICN:'InterCity Neigezug',IRE:'InterRegioExpress',EXT:'Extrazug',
+    TER:'TER',ARC:'Arc Express',FUN:'Standseilbahn',PB:'Luftseilbahn',GB:'Gondelbahn',
+    SL_:'Sesselbahn',ASC:'Aufzug',M:'Metro',FAE:'Fähre',KB:'Kleinbus',EXB:'Expressbus',
+    NFB:'Niederflurbus',NFT:'Niederflurtram',BN:'Nachtbus',TN:'Nachtzug',CAR:'Fernbus'};
   const legend=
     '<div class="pk-legend"><h5>Zeichenerklärung</h5>'+
     '<div class="pk-lg">'+
-      Object.keys(usedVT).map(k=>'<div><b>'+VT[k].s+'</b> '+esc(VT[k].t)+'</div>').join('')+
-      '<div><b></b> ohne Zeichen: täglich</div>'+
+      (PK.mode==='live'?'':
+        Object.keys(usedVT).sort().map(k=>'<div><b>'+usedVT[k].s+'</b> '+esc(usedVT[k].t)+'</div>').join('')+
+        '<div><b></b> ohne Zeichen: täglich</div>')+
       Object.keys(prods).sort().map(p=>'<div><b>'+
         (/^(B|BUS|NFB)$/i.test(p)?lineHtml('Bus',{type:'bus'}):lineHtml(p))+
         '</b> '+esc(PRODNAME[p]||p)+'</div>').join('')+
@@ -1940,13 +2223,24 @@ function renderPoster(){
       '<span class="pk-ico">🚆</span>'+
       '<h2>Abfahrt</h2><span>Départ · Partenza · Departure</span></div>'+
     '<div class="pk-head"><h3>'+esc(PK.stop.name)+'</h3>'+
-      '<div class="sub">Fahrplan '+pad(d0.getDate())+'.'+pad(d0.getMonth()+1)+'.'+d0.getFullYear()+
-      ' · ganzer Betriebstag · '+rows.length+' Abfahrten'+
+      '<div class="sub">'+
+      (PK.mode==='live'
+        ? 'Echtzeit · Stand '+(PK.liveAt?hhmm(PK.liveAt):'–')+' Uhr · nächste '+rows.length+' Abfahrten'
+        : PK.source==='soll'
+          ? esc((SOLL.meta&&SOLL.meta.title)||'Fahrplan')+
+            (SOLL.meta?' · gültig '+SOLL.meta.from.split('-').reverse().join('.')+' – '+
+              SOLL.meta.to.split('-').reverse().join('.'):'')+' · '+rows.length+' Abfahrten'
+          : 'Fahrplan '+pad(d0.getDate())+'.'+pad(d0.getMonth()+1)+'.'+d0.getFullYear()+
+            ' · ganzer Betriebstag · '+rows.length+' Abfahrten')+
       (parts.length>1&&!all
         ? ' · '+esc(PK.sel.slice().sort((a,b)=>a-b).map(i=>parts[i].label).join(' + '))
         : '')+
       '</div></div>'+partChips+
     '<div class="pk-tools">'+
+      '<span class="pk-mode">'+
+        '<button class="chip'+(PK.mode==='plan'?' on':'')+'" data-m="plan">Fahrplan</button>'+
+        '<button class="chip'+(PK.mode==='live'?' on':'')+'" data-m="live">Echtzeit</button>'+
+      '</span>'+
       '<span>Auszufüllen:</span>'+
       '<button class="chip'+(PK.blank.time?' on':'')+'" data-b="time">Zeit</button>'+
       '<button class="chip'+(PK.blank.line?' on':'')+'" data-b="line">Gattung</button>'+
@@ -1957,14 +2251,21 @@ function renderPoster(){
       '<span class="pk-hintsel">Ein Eintrag füllt seine stündlichen Wiederholungen mit</span>'+
       '<span class="pk-score" id="pkScore"></span>'+
     '</div>'+
-    '<div class="pk-colhead"><span></span><span>Zeit</span><span>Gattung</span><span>Nach</span><span>Gleis</span></div>'+
-    '<div class="pk-body">'+body+'</div>'+
+    '<div class="pk-colhead'+(PK.mode==='live'?' live':'')+'"><span></span><span>Zeit</span>'+
+      '<span>Gattung</span><span>Nach</span><span>Gleis</span>'+
+      (PK.mode==='live'?'<span>Hinweis</span>':'')+'</div>'+
+    '<div class="pk-body'+(PK.mode==='live'?' live':'')+'">'+body+'</div>'+
     trackNote+legend+
     '<div class="pk-foot">Einbezogene Haltestellen: '+esc((PK.stops||[PK.stop.name]).join(', '))+
-    '. Fahrplandaten: '+(CFG.source==='searchch'?'search.ch':'transport.opendata.ch')+
-    '. Verkehrstage aus dem Vergleich von Mittwoch, Samstag und Sonntag abgeleitet; Feiertagsregelungen '+
-    'und saisonale Einschränkungen sind darin nicht enthalten. Nachbau zu Übungszwecken, ohne Signet '+
-    'und ohne amtlichen Charakter.</div>';
+    (PK.source==='soll'
+      ? '. Fahrplandaten: offizieller Sollfahrplan der Schweiz (HRDF), opentransportdata.swiss. '+
+        'Verkehrstage aus den Bitfeldern des Fahrplans; Fahrten an weniger als 14 Tagen sind nicht aufgeführt.'
+      : '. Fahrplandaten: '+(CFG.source==='searchch'?'search.ch':'transport.opendata.ch')+
+        (PK.mode==='live'
+          ? '. Echtzeitlage mit Verspätungen, Auffrischung jede Minute.'
+          : '. Verkehrstage aus dem Vergleich von Werktag, Samstag und Sonntag abgeleitet; Feiertagsregelungen '+
+            'und saisonale Einschränkungen sind darin nicht enthalten.'))+
+    ' Nachbau zu Übungszwecken, ohne Signet und ohne amtlichen Charakter.</div>';
   bindPoster();
   updateScore();
 }
@@ -1979,6 +2280,18 @@ function pkNorm(s){ return String(s||'').toLowerCase()
 
 function bindPoster(){
   const sheet=$('pkSheet');
+  sheet.querySelectorAll('.chip[data-m]').forEach(b=>b.onclick=()=>{
+    if(PK.mode===b.dataset.m) return;
+    PK.mode=b.dataset.m;
+    loadPoster(PK.stop&&(PK.stop.id||PK.stop.name));
+  });
+  clearInterval(PK.liveTimer);
+  if(PK.mode==='live'){
+    PK.liveTimer=setInterval(()=>{
+      if($('pkSheet').hidden||PK.loading||PK.mode!=='live') return;
+      loadPoster(PK.stop&&(PK.stop.id||PK.stop.name));
+    },60000);
+  }
   sheet.querySelectorAll('.chip[data-p]').forEach(b=>b.onclick=()=>{
     const parts=PK.parts||[];
     if(b.dataset.p==='all'){
@@ -2038,6 +2351,7 @@ function solveField(inp,force,cascade){
 }
 
 function pkBack(){
+  clearInterval(PK.liveTimer);
   $('pkSheet').hidden=true; $('pkPick').hidden=false;
   if(map) setTimeout(()=>map.resize(),50);
 }
@@ -2078,6 +2392,108 @@ $('tabGame').onclick=()=>showView('game');
 $('tabPoster').onclick=()=>showView('poster');
 
 
+
+/* ---------- Betriebslage ---------------------------------------------
+   Quelle: Datenset „rail-traffic-information" auf data.sbb.ch, alle fünf
+   Minuten aktualisiert. Jede Störung erhält eine Seite, die Seiten laufen
+   in Endlosschleife. Eingeklappt bleibt eine einzige Seite mit der Anzahl
+   Störungen im Gesamtnetz.                                              */
+const DISR={items:[],page:0,collapsed:false,rot:null,loaded:false};
+
+function pickField(o,names){
+  for(const n of names) if(o[n]&&typeof o[n]==='string') return o[n];
+  const keys=Object.keys(o);
+  for(const n of names){
+    const k=keys.find(k=>k.toLowerCase().indexOf(n)===0&&typeof o[k]==='string'&&o[k]);
+    if(k) return o[k];
+  }
+  return '';
+}
+const stripTags=t=>String(t||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
+
+async function loadDisruptions(){
+  const url='https://data.sbb.ch/api/explore/v2.1/catalog/datasets/'+
+    'rail-traffic-information/records?limit=60&lang=de';
+  let recs=[];
+  try{
+    const j=await getJSON(url);
+    recs=(j&&(j.results||j.records||[]))||[];
+  }catch(e){ DISR.items=[]; DISR.loaded=true; DISR.err=true; renderDisr(); return; }
+  const now=Date.now();
+  const isGerman=f=>{
+    const k=Object.keys(f).find(k=>/^(language|lang|sprache|locale)$/i.test(k));
+    if(!k) return true;                      /* kein Sprachfeld: behalten */
+    return /^de/i.test(String(f[k]||''));
+  };
+  const items=recs.map(r=>{
+    const f=r.record&&r.record.fields?r.record.fields:(r.fields||r);
+    if(!isGerman(f)) return null;
+    const from=Date.parse(pickField(f,['validitybegin','validity_begin','begin','start']))||0;
+    const to=Date.parse(pickField(f,['validityend','validity_end','end','stop']))||0;
+    return {
+      title:stripTags(pickField(f,['title_de','titel_de','titel','title','header','subject','name'])),
+      text:stripTags(pickField(f,['description_de','beschreibung','description','text_de','text',
+        'body','detail','message','info'])),
+      from,to
+    };
+  }).filter(i=>i&&(i.title||i.text));
+  /* ausschliesslich Meldungen, deren Gültigkeit jetzt läuft */
+  const live=items.filter(i=>(!i.from||i.from<=now)&&(!i.to||i.to>=now))
+    .sort((a,b)=>(b.from||0)-(a.from||0));
+  DISR.items=live.slice(0,20);
+  DISR.loaded=true; DISR.err=false;
+  if(DISR.page>=DISR.items.length) DISR.page=0;
+  renderDisr();
+}
+
+function disrPageText(){
+  if(DISR.collapsed||!DISR.items.length){
+    const n=DISR.items.length;
+    if(!DISR.loaded) return 'Betriebslage wird geladen …';
+    if(DISR.err) return '<b>Betriebslage:</b> zurzeit nicht abrufbar.';
+    return n
+      ? '<b>Betriebslage:</b> '+n+(n===1?' Störung':' Störungen')+' im Netz. Zum Lesen aufklappen.'
+      : '<b>Betriebslage:</b> keine Störungsmeldungen im Netz.';
+  }
+  const it=DISR.items[DISR.page]||{};
+  const head=it.title?'<b>'+esc(it.title)+'</b> ':'<b>Störung</b> ';
+  let body=esc(it.text||'');
+  if(body.length>260) body=body.slice(0,257)+'…';
+  return head+body;
+}
+function renderDisr(){
+  const t=$('disrText'),d=$('disrDots');
+  if(!t||!d) return;
+  t.innerHTML=disrPageText();
+  const pages=(DISR.collapsed||!DISR.items.length)?1:DISR.items.length;
+  const cur=(DISR.collapsed||!DISR.items.length)?0:DISR.page;
+  d.innerHTML=Array.from({length:Math.min(pages,20)},(_,i)=>
+    '<i'+(i===cur?' class="on"':'')+' data-i="'+i+'"></i>').join('');
+  d.querySelectorAll('i').forEach(el=>el.onclick=ev=>{
+    ev.stopPropagation();
+    DISR.page=+el.dataset.i; renderDisr(); restartRotation();
+  });
+  const f=$('disrFold');
+  if(f){ f.textContent=DISR.collapsed?'▸':'▾';
+    f.title=DISR.collapsed?'Störungsmeldungen einblenden':'Störungsmeldungen ausblenden'; }
+}
+function restartRotation(){
+  clearInterval(DISR.rot);
+  DISR.rot=setInterval(()=>{
+    if(DISR.collapsed||DISR.items.length<2) return;
+    DISR.page=(DISR.page+1)%DISR.items.length;
+    renderDisr();
+  },7000);
+}
+$('disrFold').onclick=e=>{
+  e.stopPropagation();
+  DISR.collapsed=!DISR.collapsed;
+  DISR.page=0; renderDisr(); restartRotation();
+};
+loadDisruptions();
+setInterval(loadDisruptions,60000);
+restartRotation();
+
 /* ---------- Selbsttest -----------------------------------------------
    Manche Umgebungen, etwa lokal geöffnete Dateien in iOS-Viewern, lassen
    weder fremde Skripte noch Datenabrufe zu. Dann steht hier, was genau
@@ -2100,7 +2516,7 @@ async function selfTest(){
 async function showOffline(){
   $('controls').style.display='none';
   $('deps').innerHTML='<li class="loading">Selbsttest läuft …</li>';
-  $('mystery').innerHTML='<b>Kein Netzzugriff</b> Diese Umgebung lässt den Abruf fremder Server nicht zu.';
+  $('mystery').innerHTML='<span class="q">kein Netzzugriff</span>';
   const res=await selfTest();
   const ok=res.filter(r=>/erreichbar|geladen/.test(r[1])).length;
   $('deps').innerHTML='<li class="loading" style="text-align:left">'+
